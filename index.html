@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>xpr0xy</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .container {
+      text-align: center;
+      padding: 2rem;
+    }
+    .glitch {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      animation: glitch 2s infinite;
+    }
+    @keyframes glitch {
+      0%, 90%, 100% { opacity: 1; transform: translate(0); }
+      92% { opacity: 0.8; transform: translate(-2px, 1px); }
+      94% { opacity: 1; transform: translate(2px, -1px); }
+      96% { opacity: 0.9; transform: translate(0, 2px); }
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: normal;
+      letter-spacing: 0.1em;
+      margin-bottom: 2rem;
+    }
+    .cursor {
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    .links {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      margin-top: 3rem;
+    }
+    a {
+      color: #666;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    a:hover {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="glitch">🂡</div>
+    <h1><span id="text"></span><span class="cursor">_</span></h1>
+    <div class="links">
+      <a href="https://github.com/xpr0xy">github</a>
+      <a href="https://pr0xy.dev">blog</a>
+    </div>
+  </div>
+  <script>
+    const text = "i build things";
+    let i = 0;
+    function type() {
+      if (i < text.length) {
+        document.getElementById('text').textContent += text.charAt(i);
+        i++;
+        setTimeout(type, 100 + Math.random() * 100);
+      }
+    }
+    setTimeout(type, 500);
+  </script>
+</body>
+</html>
