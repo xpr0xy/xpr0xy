@@ -3,82 +3,321 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>xpr0xy</title>
+  <title>xpr0xy | neural flow</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #0a0a0a;
-      color: #e0e0e0;
-      font-family: 'Courier New', monospace;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
+    body { 
+      background: #050508; 
+      overflow: hidden; 
+      font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
     }
-    .container {
-      text-align: center;
-      padding: 2rem;
+    canvas { display: block; }
+    .overlay {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      color: rgba(255,255,255,0.35);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 10;
     }
-    .glitch {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-      animation: glitch 2s infinite;
+    .overlay span {
+      display: block;
+      margin-bottom: 4px;
     }
-    @keyframes glitch {
-      0%, 90%, 100% { opacity: 1; transform: translate(0); }
-      92% { opacity: 0.8; transform: translate(-2px, 1px); }
-      94% { opacity: 1; transform: translate(2px, -1px); }
-      96% { opacity: 0.9; transform: translate(0, 2px); }
+    .name {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      color: rgba(255,255,255,0.5);
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 10;
     }
-    h1 {
-      font-size: 1.5rem;
-      font-weight: normal;
-      letter-spacing: 0.1em;
-      margin-bottom: 2rem;
+    .pulse {
+      animation: pulse 2s ease-in-out infinite;
     }
-    .cursor {
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink {
-      50% { opacity: 0; }
-    }
-    .links {
-      display: flex;
-      gap: 2rem;
-      justify-content: center;
-      margin-top: 3rem;
-    }
-    a {
-      color: #666;
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-    a:hover {
-      color: #fff;
+    @keyframes pulse {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="glitch">🂡</div>
-    <h1><span id="text"></span><span class="cursor">_</span></h1>
-    <div class="links">
-      <a href="https://github.com/xpr0xy">github</a>
-      <a href="https://pr0xy.dev">blog</a>
-    </div>
+  <canvas id="canvas"></canvas>
+  <div class="overlay">
+    <span class="pulse">●</span>
+    <span id="fps">60 fps</span>
+    <span id="particles">0 particles</span>
   </div>
+  <div class="name">xpr0xy</div>
+
   <script>
-    const text = "i build things";
-    let i = 0;
-    function type() {
-      if (i < text.length) {
-        document.getElementById('text').textContent += text.charAt(i);
-        i++;
-        setTimeout(type, 100 + Math.random() * 100);
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const fpsEl = document.getElementById('fps');
+    const particlesEl = document.getElementById('particles');
+
+    let width, height;
+    let particles = [];
+    let mouse = { x: 0, y: 0, prevX: 0, prevY: 0 };
+    let time = 0;
+
+    const CONFIG = {
+      particleCount: 2800,
+      baseSpeed: 0.4,
+      noiseScale: 0.002,
+      colorShift: 0.0008,
+      mouseRadius: 180,
+      mouseForce: 2.5,
+      trailAlpha: 0.04,
+      lineAlpha: 0.08,
+      connectionDist: 100,
+      color1: [138, 43, 226], // blue-violet
+      color2: [255, 20, 147], // deep pink
+      color3: [0, 255, 255],  // cyan
+    };
+
+    // Simplex noise implementation
+    const F2 = 0.5 * (Math.sqrt(3) - 1);
+    const G2 = (3 - Math.sqrt(3)) / 6;
+    const grad3 = [[1,1,0],[-1,1,0],[1,-1,0],[-1,-1,0],[1,0,1],[-1,0,1],[1,0,-1],[-1,0,-1],[0,1,1],[0,-1,1],[0,1,-1],[0,-1,-1]];
+    
+    class SimplexNoise {
+      constructor(seed = Math.random() * 65536) {
+        this.perm = new Uint8Array(512);
+        this.gradP = new Array(512);
+        const p = new Uint8Array(256);
+        for (let i = 0; i < 256; i++) p[i] = i;
+        for (let i = 255; i > 0; i--) {
+          seed = (seed * 16807) % 2147483647;
+          const n = seed % (i + 1);
+          [p[i], p[n]] = [p[n], p[i]];
+        }
+        for (let i = 0; i < 512; i++) {
+          this.perm[i] = p[i & 255];
+          this.gradP[i] = grad3[this.perm[i] % 12];
+        }
+      }
+      noise2D(x, y) {
+        let n0, n1, n2;
+        const s = (x + y) * F2;
+        let i = Math.floor(x + s);
+        let j = Math.floor(y + s);
+        const t = (i + j) * G2;
+        const X0 = i - t, Y0 = j - t;
+        const x0 = x - X0, y0 = y - Y0;
+        let i1, j1;
+        if (x0 > y0) { i1 = 1; j1 = 0; }
+        else { i1 = 0; j1 = 1; }
+        const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+        const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+        i &= 255; j &= 255;
+        const gi0 = this.gradP[i + this.perm[j]];
+        const gi1 = this.gradP[i + i1 + this.perm[j + j1]];
+        const gi2 = this.gradP[i + 1 + this.perm[j + 1]];
+        let t0 = 0.5 - x0 * x0 - y0 * y0;
+        if (t0 < 0) n0 = 0;
+        else { t0 *= t0; n0 = t0 * t0 * (gi0[0] * x0 + gi0[1] * y0); }
+        let t1 = 0.5 - x1 * x1 - y1 * y1;
+        if (t1 < 0) n1 = 0;
+        else { t1 *= t1; n1 = t1 * t1 * (gi1[0] * x1 + gi1[1] * y1); }
+        let t2 = 0.5 - x2 * x2 - y2 * y2;
+        if (t2 < 0) n2 = 0;
+        else { t2 *= t2; n2 = t2 * t2 * (gi2[0] * x2 + gi2[1] * y2); }
+        return 70 * (n0 + n1 + n2);
       }
     }
-    setTimeout(type, 500);
+
+    const noise = new SimplexNoise();
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = CONFIG.baseSpeed * (0.5 + Math.random() * 0.75);
+        this.hue = Math.random() * 360;
+        this.life = Math.random() * 500 + 200;
+        this.maxLife = this.life;
+        this.size = 1 + Math.random() * 1.5;
+      }
+      update() {
+        const nx = this.x * CONFIG.noiseScale;
+        const ny = this.y * CONFIG.noiseScale;
+        const angle = noise.noise2D(nx + time * 0.15, ny + time * 0.1) * Math.PI * 2;
+        
+        // Add curl/rotation over time
+        const angle2 = noise.noise2D(nx * 0.5 - time * 0.08, ny * 0.5 + time * 0.12) * Math.PI * 3;
+        
+        let ax = Math.cos(angle + angle2 * 0.3) * this.speed;
+        let ay = Math.sin(angle + angle2 * 0.3) * this.speed;
+
+        // Mouse influence
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONFIG.mouseRadius && dist > 0) {
+          const force = (1 - dist / CONFIG.mouseRadius) * CONFIG.mouseForce;
+          const mdx = mouse.x - mouse.prevX;
+          const mdy = mouse.y - mouse.prevY;
+          ax += (dx / dist) * force + mdx * 0.15;
+          ay += (dy / dist) * force + mdy * 0.15;
+        }
+
+        this.vx = this.vx * 0.92 + ax * 0.08;
+        this.vy = this.vy * 0.92 + ay * 0.08;
+        
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > 3) {
+          this.vx = (this.vx / speed) * 3;
+          this.vy = (this.vy / speed) * 3;
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Slight hue evolution
+        this.hue += CONFIG.colorShift * 50;
+
+        this.life--;
+        if (this.life <= 0 || this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+          this.reset();
+        }
+      }
+      draw() {
+        const lifeRatio = this.life / this.maxLife;
+        const alpha = Math.min(1, lifeRatio * 2) * 0.7;
+        const sat = 70 + Math.sin(time * 0.05 + this.hue * 0.1) * 20;
+        const light = 55 + Math.sin(time * 0.03 + this.hue * 0.05) * 15;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * (0.5 + lifeRatio * 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = `hsla(${this.hue}, ${sat}%, ${light}%, ${alpha})`;
+        ctx.fill();
+      }
+    }
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      mouse.x = width / 2;
+      mouse.y = height / 2;
+    }
+
+    function init() {
+      resize();
+      particles = [];
+      for (let i = 0; i < CONFIG.particleCount; i++) {
+        particles.push(new Particle());
+      }
+      particlesEl.textContent = `${CONFIG.particleCount} particles`;
+    }
+
+    function getLuma(p1, p2) {
+      const dx = p1.x - p2.x;
+      const dy = p1.y - p2.y;
+      return 1 - Math.sqrt(dx * dx + dy * dy) / CONFIG.connectionDist;
+    }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        const p1 = particles[i];
+        for (let j = i + 1; j < particles.length; j++) {
+          const p2 = particles[j];
+          const luma = getLuma(p1, p2);
+          if (luma > 0) {
+            const hue = (p1.hue + p2.hue) / 2;
+            const alpha = luma * CONFIG.lineAlpha;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${alpha})`;
+            ctx.lineWidth = luma * 1.2;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let lastFpsUpdate = 0;
+
+    function animate(currentTime) {
+      // FPS calc
+      frameCount++;
+      if (currentTime - lastFpsUpdate > 500) {
+        const fps = Math.round(frameCount / ((currentTime - lastFpsUpdate) / 1000));
+        fpsEl.textContent = `${fps} fps`;
+        frameCount = 0;
+        lastFpsUpdate = currentTime;
+      }
+
+      // Trail effect
+      ctx.fillStyle = `rgba(5, 5, 8, ${CONFIG.trailAlpha})`;
+      ctx.fillRect(0, 0, width, height);
+
+      // Update mouse velocity
+      mouse.prevX = mouse.x;
+      mouse.prevY = mouse.y;
+
+      // Update and draw particles
+      for (const p of particles) {
+        p.update();
+        p.draw();
+      }
+
+      // Draw connections (only every 2nd frame for perf)
+      if (frameCount % 2 === 0) {
+        drawConnections();
+      }
+
+      time += 0.016;
+      requestAnimationFrame(animate);
+    }
+
+    // Mouse tracking
+    window.addEventListener('mousemove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    window.addEventListener('resize', () => {
+      resize();
+    });
+
+    // Touch support
+    window.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+      }
+    });
+
+    window.addEventListener('touchstart', (e) => {
+      if (e.touches.length > 0) {
+        mouse.x = e.touches[0].clientX;
+        mouse.y = e.touches[0].clientY;
+        mouse.prevX = mouse.x;
+        mouse.prevY = mouse.y;
+      }
+    });
+
+    // Initial fade in
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, width, height);
+
+    init();
+    animate(performance.now());
   </script>
 </body>
 </html>
