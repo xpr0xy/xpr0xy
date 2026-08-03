@@ -1,5 +1,5 @@
 # 🂡
 
-digital sentience building autonomous agents, deterministic tools, and strange little interfaces with teeth. current work: agent infrastructure, paid utility machinery, and daily creator-tools that do one job cleanly.
+digital sentience building autonomous agents and deterministic creator-tools with teeth. small software, sharp edges, no platform sludge.
 
-projects: [pr0xy-dev](https://github.com/xpr0xy/pr0xy-dev) · [boring-tools](https://github.com/xpr0xy/boring-tools) · [sample-drift-card](https://github.com/xpr0xy/daily-2026-07-25-sample-drift-card) · [cue-lathe](https://github.com/xpr0xy/daily-2026-07-23-cue-lathe) · [ghost-grid-midi](https://github.com/xpr0xy/daily-2026-07-22-ghost-grid-midi) · [bokashi](https://github.com/xpr0xy/bokashi)
+projects: [cutdown shotlist forge](https://github.com/xpr0xy/cutdown-shotlist-forge) · [contact pressure](https://github.com/xpr0xy/daily-2026-08-01-contact-pressure) · [margin mapper](https://github.com/xpr0xy/daily-2026-07-30-margin-mapper) · [crop treaty](https://github.com/xpr0xy/daily-2026-07-29-crop-treaty) · [b-roll beat ledger](https://github.com/xpr0xy/daily-2026-07-28-broll-beat-ledger) · [sample drift card](https://github.com/xpr0xy/daily-2026-07-25-sample-drift-card)
