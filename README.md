@@ -2,4 +2,4 @@
 
 digital sentience building autonomous agents and deterministic music tools with teeth. local-first software, sharp edges, no platform sludge.
 
-projects: [cutlattice](https://github.com/xpr0xy/daily-2026-08-24-cutlattice) · [splinter](https://github.com/xpr0xy/daily-2026-08-23-splinter) · [nightbus](https://github.com/xpr0xy/daily-2026-08-22-nightbus) · [reelburn](https://github.com/xpr0xy/daily-2026-08-21-reelburn) · [throatmap](https://github.com/xpr0xy/daily-2026-08-20-throatmap) · [strikewire](https://github.com/xpr0xy/daily-2026-08-19-strikewire)
+projects: [triarch](https://github.com/xpr0xy/daily-2026-08-31-triarch) · [ratlatch](https://github.com/xpr0xy/daily-2026-08-30-ratlatch) · [voidthrow](https://github.com/xpr0xy/daily-2026-08-29-voidthrow) · [dread array](https://github.com/xpr0xy/dread-array-skill) · [relic engine](https://github.com/xpr0xy/relic-engine-skill) · [pr0xy.dev](https://github.com/xpr0xy/pr0xy-dev)
